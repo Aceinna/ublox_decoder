@@ -7,3 +7,6 @@ The output includes
 2) imu raw data at 10Hz (wk, ws, fx, fy, fz, wx, wy, wz), wxyz => deg/s, fxyz, => m/s/s
 3) GPS+IMU integrated solution from internal INS engine
 
+
+add a RTCM decoder for easily use
+
