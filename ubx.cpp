@@ -55,11 +55,17 @@ void decode_ubx(const char* fname)
 		}
 		else if (type == 12)
 		{
-			if (fimu != NULL) fprintf(fimu, "2,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%14.4f,%14.4f,%14.4f,%14.4f,%14.4f,%14.4f\n"
+			if (fimu != NULL) fprintf(fimu, "2,%4i,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f\n"
+				, wn
+				, raw.data[17], raw.data[11]
+				, raw.data[12], raw.data[13], raw.data[14], raw.data[15], raw.data[16]);
+		}
+		else if (type == 11)
+		{
+			if (fimu != NULL) fprintf(fimu, "3,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f\n"
 				, wn
 				, raw.data[0], raw.data[1], raw.data[2], raw.data[3], raw.data[4], raw.data[5]
-				, raw.data[6], raw.data[7], raw.data[8], raw.data[9], raw.data[10], raw.data[11]
-				, raw.data[12], raw.data[13], raw.data[14], raw.data[15], raw.data[16]);
+				, raw.data[6], raw.data[7], raw.data[8], raw.data[9], raw.data[10]);
 		}
 		else
 		{

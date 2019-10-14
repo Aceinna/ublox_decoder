@@ -125,7 +125,7 @@ static void setR4(unsigned char *p, float          r) {memcpy(p,&r,4);}
 static void setR8(unsigned char *p, double         r) {memcpy(p,&r,8);}
 
 
-static FILE* fpimu = NULL;
+//static FILE* fpimu = NULL;
 
 /* checksum ------------------------------------------------------------------*/
 static int checksum(unsigned char *buff, int len)
@@ -1323,11 +1323,11 @@ static int decode_hnrpvt(raw_t* raw)
 	hnrPvt.sAcc = U4(p + 60);   //sAcc, mm/s, speed accuracy estimate
 	hnrPvt.headAcc = U4(p + 64) * 1.0e-5; //headAcc, deg, scaling is 1e-5, heading accuracy estimate
 
-	fprintf(fpimu, "%.3f,%.10f,%.10f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,",
-		hnrPvt.itow / 1000.0, hnrPvt.lat, hnrPvt.lon, hnrPvt.height * 1e-3,
-		hnrPvt.gSpeed * 1e-3, hnrPvt.headMot, hnrPvt.headVeh,
-		hnrPvt.hAcc * 1e-3, hnrPvt.vAcc * 1e-3, hnrPvt.sAcc * 1e-3, hnrPvt.headAcc
-	);
+	//fprintf(fpimu, "%.3f,%.10f,%.10f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,",
+	//	hnrPvt.itow / 1000.0, hnrPvt.lat, hnrPvt.lon, hnrPvt.height * 1e-3,
+	//	hnrPvt.gSpeed * 1e-3, hnrPvt.headMot, hnrPvt.headVeh,
+	//	hnrPvt.hAcc * 1e-3, hnrPvt.vAcc * 1e-3, hnrPvt.sAcc * 1e-3, hnrPvt.headAcc
+	//);
 
 	raw->data[0] = hnrPvt.itow / 1000.0;
 	raw->data[1] = hnrPvt.lat;
@@ -1412,12 +1412,12 @@ static int decode_hnrins(raw_t* raw)
 
 	hnrIns.iTOW = U4(p + 8);    //ms
 
-	hnrIns.xAngRate = U4(p + 12) * 1.0e-3;
-	hnrIns.yAngRate = U4(p + 16) * 1.0e-3;
-	hnrIns.zAngRate = U4(p + 20) * 1.0e-3;
-	hnrIns.xAccel = U4(p + 24) * 1.0e-2;
-	hnrIns.yAccel = U4(p + 28) * 1.0e-2;
-	hnrIns.zAccel = U4(p + 32) * 1.0e-2;
+	hnrIns.xAngRate = I4(p + 12) * 1.0e-3;
+	hnrIns.yAngRate = I4(p + 16) * 1.0e-3;
+	hnrIns.zAngRate = I4(p + 20) * 1.0e-3;
+	hnrIns.xAccel = I4(p + 24) * 1.0e-2;
+	hnrIns.yAccel = I4(p + 28) * 1.0e-2;
+	hnrIns.zAccel = I4(p + 32) * 1.0e-2;
 
 	// printf("decode_hnrpvt\r\n");
 	// printf("bitfield0=%d\r\n", hnrIns.bitfield0);
@@ -1429,10 +1429,10 @@ static int decode_hnrins(raw_t* raw)
 	// printf("yAccel=%f\r\n", hnrIns.yAccel);
 	// printf("zAccel=%f\r\n", hnrIns.zAccel);
 
-	fprintf(fpimu, "%.10f,%.10f,%.10f,%.10f,%.10f,%.10f\n",
-		hnrIns.xAccel, hnrIns.yAccel, hnrIns.zAccel,
-		hnrIns.xAngRate, hnrIns.yAngRate, hnrIns.zAngRate
-	);
+	//fprintf(fpimu, "%.10f,%.10f,%.10f,%.10f,%.10f,%.10f\n",
+	//	hnrIns.xAccel, hnrIns.yAccel, hnrIns.zAccel,
+	//	hnrIns.xAngRate, hnrIns.yAngRate, hnrIns.zAngRate
+	//);
 
 	raw->data[11] = hnrIns.xAccel;
 	raw->data[12] = hnrIns.yAccel;
@@ -1440,6 +1440,7 @@ static int decode_hnrins(raw_t* raw)
 	raw->data[14] = hnrIns.xAngRate;
 	raw->data[15] = hnrIns.yAngRate;
 	raw->data[16] = hnrIns.zAngRate;
+	raw->data[17] = hnrIns.iTOW / 1000.0;
 
 	//printf("%.10f,%.10f,%.10f,%.10f,%.10f,%.10f\n",
 	//	hnrIns.xAccel, hnrIns.yAccel, hnrIns.zAccel,
@@ -1457,12 +1458,12 @@ static int decode_ubx(raw_t *raw)
     
     trace(3,"decode_ubx: type=%04x len=%d\n",type,raw->len);
 
-	if (NULL == fpimu) {
-		fpimu = fopen("m8l_imu.txt", "w");
-		if (NULL == fpimu) {
-			return -1;
-		}
-	}
+	//if (NULL == fpimu) {
+	//	fpimu = fopen("m8l_imu.txt", "w");
+	//	if (NULL == fpimu) {
+	//		return -1;
+	//	}
+	//}
     
     /* checksum */
     if (!checksum(raw->buff,raw->len)) {
