@@ -600,7 +600,7 @@ static int decode_navsol(raw_t *raw)
     if ((U1(p+11)&0x0C)==0x0C) {
         raw->time=gpst2time(week,itow*1E-3+ftow*1E-9);
     }
-    return 0;
+    return 13;
 }
 /* decode ubx-nav-timegps: gps time solution ---------------------------------*/
 static int decode_navtime(raw_t *raw)
