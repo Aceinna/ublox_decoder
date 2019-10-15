@@ -22,18 +22,13 @@ void decode_ubx(const char* fname)
 
 	fdat = fopen(fname, "rb"); if (fdat == NULL) return;
 
-	const char* result = strrchr(fname, '\\');
-	if (result != NULL)
-		strncpy(fileName, result + 1, strlen(result));
-	else
-		strncpy(fileName, fname, strlen(fname));
-	char* result1 = strrchr(fileName, '.');
-	if (result1 != NULL) result1[0] = '\0';
+	strncpy(fileName, fname, strlen(fname));
+	char* result = strrchr(fileName, '.');
+	if (result != NULL) result[0] = '\0';
 
 	sprintf(outfilename, "%s_imu.txt", fileName); 
 
-
-	fimu = fopen(outfilename, "w"); if (fimu == NULL) return;
+	fimu = fopen(outfilename, "w");
 
 	int type = 0;
 	int wn = 0;
@@ -103,8 +98,8 @@ void decode_ubx(const char* fname)
 
 	free_raw(&raw);
 
-	if (fdat == NULL) fclose(fdat);
-	if (fimu == NULL) fclose(fimu);
+	if (fdat != NULL) fclose(fdat);
+	if (fimu != NULL) fclose(fimu);
 
 	return;
 }
@@ -125,19 +120,15 @@ void decode_rtcm3(const char* fname, int year, int mon, int day)
 
 	fdat = fopen(fname, "rb"); if (fdat == NULL) return;
 
-	const char* result = strrchr(fname, '\\');
-	if (result != NULL)
-		strncpy(fileName, result + 1, strlen(result));
-	else
-		strncpy(fileName, fname, strlen(fname));
-	char* result1 = strrchr(fileName, '.');
-	if (result1 != NULL) result1[0] = '\0';
+	strncpy(fileName, fname, strlen(fname));
+	char* result = strrchr(fileName, '.');
+	if (result != NULL) result[0] = '\0';
 
 	sprintf(outfilename, "%s_rtcm.txt", fileName);
 
 	fgps = fopen(outfilename, "w"); if (fgps == NULL) return;
 
-	double ep[] = { year, mon, day, 0, 0, 0.0 };
+	double ep[] = { (double)year, (double)mon, (double)day, 0.0, 0.0, 0.0 };
 
 	rtcm.time = epoch2time(ep);
 
@@ -197,8 +188,8 @@ void decode_rtcm3(const char* fname, int year, int mon, int day)
 
 	free_rtcm(&rtcm);
 
-	if (fdat == NULL) fclose(fdat);
-	if (fgps == NULL) fclose(fgps);
+	if (fdat != NULL) fclose(fdat);
+	if (fgps != NULL) fclose(fgps);
 
 	return;
 }
