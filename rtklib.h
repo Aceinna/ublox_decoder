@@ -1305,6 +1305,7 @@ typedef struct {        /* receiver raw data control type */
     int format;         /* receiver stream format */
     void *rcv_data;     /* receiver dependent data */
 	double data[30]; /* temp to store ublox IMU data */
+	double f9k_data[30]; /* temp to store f9k IMU data */
 } raw_t;
 
 typedef struct {        /* stream type */

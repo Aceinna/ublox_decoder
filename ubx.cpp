@@ -22,13 +22,18 @@ void decode_ubx(const char* fname)
 
 	fdat = fopen(fname, "rb"); if (fdat == NULL) return;
 
-	strncpy(fileName, fname, strlen(fname));
-	char* result = strrchr(fileName, '.');
-	if (result != NULL) result[0] = '\0';
+	const char* result = strrchr(fname, '\\');
+	if (result != NULL)
+		strncpy(fileName, result + 1, strlen(result));
+	else
+		strncpy(fileName, fname, strlen(fname));
+	char* result1 = strrchr(fileName, '.');
+	if (result1 != NULL) result1[0] = '\0';
 
 	sprintf(outfilename, "%s_imu.txt", fileName); 
 
-	fimu = fopen(outfilename, "w");
+
+	fimu = fopen(outfilename, "w"); if (fimu == NULL) return;
 
 	int type = 0;
 	int wn = 0;
@@ -61,6 +66,22 @@ void decode_ubx(const char* fname)
 				, wn
 				, raw.data[0], raw.data[1], raw.data[2], raw.data[3], raw.data[4], raw.data[5]
 				, raw.data[6], raw.data[7], raw.data[8], raw.data[9], raw.data[10]);
+		}
+		else if (type == 13)
+		{
+			if (fimu != NULL) fprintf(fimu, "4,%4i,%10.4f,%14.10f,%14.10f,%10.4f\n"
+				, wn
+				, raw.f9k_data[0], raw.f9k_data[1], raw.f9k_data[2], raw.f9k_data[3]);
+		}
+		else if (type == 14)
+		{
+			if (fimu != NULL) fprintf(fimu, "5,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f\n"
+				, wn
+				, raw.f9k_data[4], raw.f9k_data[5], raw.f9k_data[6], raw.f9k_data[7], raw.f9k_data[8]);
+		}
+		else if (type == 15) // navPvt
+		{
+			
 		}
 		else if (type == 2)
 		{
@@ -199,17 +220,18 @@ int main(int argc, char* argv[])
     //std::cout << "Hello World!\n";
 	if (argc < 2)
 	{
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008377_2019-09-05T15-27-42.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008378_2019-09-05T16-32-41.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008379_2019-09-05T17-41-08.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008380_2019-09-05T18-28-32.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008381_2019-09-05T19-14-37.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008382_2019-09-05T20-00-31.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008383_2019-09-05T20-49-50.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008384_2019-09-05T21-35-09.ubx");
-		decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008385_2019-09-05T22-20-09.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008377_2019-09-05T15-27-42.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008378_2019-09-05T16-32-41.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008379_2019-09-05T17-41-08.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008380_2019-09-05T18-28-32.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008381_2019-09-05T19-14-37.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008382_2019-09-05T20-00-31.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008383_2019-09-05T20-49-50.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008384_2019-09-05T21-35-09.ubx");
+		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008385_2019-09-05T22-20-09.ubx");
 
 		//decode_rtcm3("C:\\aceinna\\tesla\\248\\sf01248d01.dat", 2019, 9, 5);
+		decode_ubx("C:\\Users\\40141\\Desktop\\F9K-IMU-data-decoder\\short_data.ubx");
 	}
 	else
 	{

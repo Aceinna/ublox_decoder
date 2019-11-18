@@ -76,6 +76,8 @@
 
 #define ID_NAVSOL   0x0106      /* ubx message id: nav solution info */
 #define ID_NAVTIME  0x0120      /* ubx message id: nav time gps */
+#define ID_NAVPVT	0x0107		/* ubx message id: nav position velocity time */
+#define ID_ESFMEAS 	0x1002		/* ubx message id: esf external sensor fusion */
 #define ID_RXMRAW   0x0210      /* ubx message id: raw measurement data */
 #define ID_RXMSFRB  0x0211      /* ubx message id: subframe buffer */
 #define ID_RXMSFRBX 0x0213      /* ubx message id: raw subframe data */
@@ -108,6 +110,7 @@
 #define I1(p) (*((signed char *)(p)))
 static unsigned short U2(unsigned char *p) {unsigned short u; memcpy(&u,p,2); return u;}
 static unsigned int   U4(unsigned char *p) {unsigned int   u; memcpy(&u,p,4); return u;}
+static short		  I2(unsigned char* p) {short          u; memcpy(&u,p,2); return u;}
 static int            I4(unsigned char *p) {int            u; memcpy(&u,p,4); return u;}
 static float          R4(unsigned char *p) {float          r; memcpy(&r,p,4); return r;}
 static double         R8(unsigned char *p) {double         r; memcpy(&r,p,8); return r;}
@@ -600,7 +603,7 @@ static int decode_navsol(raw_t *raw)
     if ((U1(p+11)&0x0C)==0x0C) {
         raw->time=gpst2time(week,itow*1E-3+ftow*1E-9);
     }
-    return 13;
+    return 0;
 }
 /* decode ubx-nav-timegps: gps time solution ---------------------------------*/
 static int decode_navtime(raw_t *raw)
@@ -1451,6 +1454,254 @@ static int decode_hnrins(raw_t* raw)
 }
 
 
+typedef struct
+{
+	unsigned int timeTag;
+	unsigned short flags;
+	unsigned short id;
+
+	double xAccel;
+	double yAccel;
+	double zAccel;
+
+	unsigned int calibTtag;
+} ubloxEsfMeas_accel_STRUCT;
+
+typedef struct
+{
+	unsigned int timeTag;
+	unsigned short flags;
+	unsigned short id;
+
+	double xGyroscope;
+	double yGyroscope;
+	double zGyroscope;
+	double tempGyroscope;
+
+	unsigned int calibTtag;
+} ubloxEsfMeas_gyro_STRUCT;
+
+ubloxEsfMeas_accel_STRUCT esfMeas_accel;
+ubloxEsfMeas_gyro_STRUCT esfMeas_gyro;
+static int decode_esfmeas(raw_t* raw)
+{
+	unsigned char* p = raw->buff + 4;
+	unsigned int lenth = U2(p);
+	int temp = 0;
+
+	p = raw->buff + 6;
+	if (lenth == 0x18)
+	{
+		esfMeas_accel.timeTag = U4(p);
+		esfMeas_accel.flags = U2(p+4);
+		esfMeas_accel.id = U2(p+6);
+
+		temp = (U4(p + 8) << 8) >> 8;
+		if ((temp & 0x800000) != 0)
+		{
+			temp = 0 - (0xFFFFFF - temp + 1);
+		}
+		esfMeas_accel.xAccel = (float)temp/1024;
+
+		temp = (U4(p + 12) << 8) >> 8;
+		if ((temp & 0x800000) != 0)
+		{
+			temp = 0 - (0xFFFFFF - temp + 1);
+		}
+		esfMeas_accel.yAccel = (float)temp/1024;
+
+		temp = (U4(p + 16) << 8) >> 8;
+		if ((temp & 0x800000) != 0)
+		{
+			temp = 0 - (0xFFFFFF - temp + 1);
+		}
+		esfMeas_accel.zAccel = (float)temp/1024;
+
+		esfMeas_accel.calibTtag = U4(p + 20);
+
+		raw->f9k_data[0] = esfMeas_accel.timeTag;
+		raw->f9k_data[1] = esfMeas_accel.xAccel;
+		raw->f9k_data[2] = esfMeas_accel.yAccel;
+		raw->f9k_data[3] = esfMeas_accel.zAccel;
+
+		return 13;
+	}
+	else if (lenth == 0x1c)
+	{
+		esfMeas_gyro.timeTag = U4(p);
+		esfMeas_gyro.flags = U2(p + 4);
+		esfMeas_gyro.id = U2(p + 6);
+
+		temp = (U4(p + 8) << 8) >> 8;
+		if ((temp & 0x800000) != 0)
+		{
+			temp = 0 - (0xFFFFFF - temp + 1);
+		}
+		esfMeas_gyro.xGyroscope = (float)temp / 4096;
+
+		temp = (U4(p + 12) << 8) >> 8;
+		if ((temp & 0x800000) != 0)
+		{
+			temp = 0 - (0xFFFFFF - temp + 1);
+		}
+		esfMeas_gyro.yGyroscope = (float)temp / 4096;
+
+		temp = (U4(p + 16) << 8) >> 8;
+		if ((temp & 0x800000) != 0)
+		{
+			temp = 0 - (0xFFFFFF - temp + 1);
+		}
+		esfMeas_gyro.zGyroscope = (float)temp / 4096;
+
+		temp = (U4(p + 20) << 8) >> 8;
+		esfMeas_gyro.tempGyroscope = (float)temp / 100;
+
+		esfMeas_gyro.calibTtag = U4(p + 24);
+
+		raw->f9k_data[4] = esfMeas_gyro.timeTag;
+		raw->f9k_data[5] = esfMeas_gyro.xGyroscope;
+		raw->f9k_data[6] = esfMeas_gyro.yGyroscope;
+		raw->f9k_data[7] = esfMeas_gyro.zGyroscope;
+		raw->f9k_data[8] = esfMeas_gyro.tempGyroscope;
+
+		return 14;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+typedef struct
+{
+	unsigned int iTOW;      // ms
+	unsigned short year;
+	unsigned char month;
+	unsigned char day;
+	unsigned char hour;
+	unsigned char min;
+	unsigned char sec;
+	unsigned char valid;    // Validity flags
+	unsigned int tAcc;		// ns, Time accuracy estimate (UTC)
+	int nano;               // fraction of second, range -1e9..1e9 (UTC), ns
+	unsigned char fixType;	/* GNSS fix type, range 0..5
+							*  0: no fix
+							*  1: dead reckoning only
+							*  2: 2D-fix
+							*  3: 3D-fix
+							*  4: GNSS + dead reckoning combined
+							*  5: time only fix
+							*/
+	unsigned char flags;    // Fix status flags
+	unsigned char flags2;	// additional flags
+	unsigned char numSV;	//
+	int lon;        // deg, scaling is 1e-7
+	int lat;        // deg, scaling is 1e-7
+	int height;     // mm, height above ellipsoid;
+	int hMSL;       // mm, hegiht above mean seal level
+	unsigned int hAcc;      // mm, horizontal accuracy estimate
+	unsigned int vAcc;      // mm, vertical accuracy estimate
+	int velN;		// mm/s	
+	int velE;		// mm/s
+	int velD;		// mm/s
+	int gSpeed;		// mm/s
+	int headMot;    // deg, scaling is 1e-5, heading of motion (2-D)
+	unsigned int sAcc;		// mm/s, speed accuracy estimate
+	unsigned int headAcc;	// deg, scaling is 1e-5, Heading accuracy estimate of motion (2-D)
+	unsigned short pPOP;	// scaling is 0.01
+	unsigned char reserved1[6];
+	int headVeh;			// scaling is 1e-5, Heading of vehicle (2-D)
+	short magDec;			// scaling is 1e-2, Magnetic declination
+	unsigned short magAcc;	// scaling is 1e-2, Magnetic declination accuracy
+} ubloxNavPvtSTRUCT;
+
+typedef struct
+{
+	unsigned int iTOW;      // ms
+	unsigned short year;
+	unsigned char month;
+	unsigned char day;
+	unsigned char hour;
+	unsigned char min;
+	unsigned char sec;
+	unsigned char valid;    // Validity flags
+	unsigned int tAcc;		// ns, Time accuracy estimate (UTC)
+	double nano;			// fraction of second, range -1e9..1e9 (UTC), ns
+	unsigned char fixType;	/* GNSS fix type, range 0..5
+							*  0: no fix
+							*  1: dead reckoning only
+							*  2: 2D-fix
+							*  3: 3D-fix
+							*  4: GNSS + dead reckoning combined
+							*  5: time only fix
+							*/
+	unsigned char flags;    // Fix status flags
+	unsigned char flags2;	// additional flags
+	unsigned char numSV;	//
+	double lon;        // deg, scaling is 1e-7
+	double lat;        // deg, scaling is 1e-7
+	int height;     // mm, height above ellipsoid;
+	int hMSL;       // mm, hegiht above mean seal level
+	unsigned int hAcc;      // mm, horizontal accuracy estimate
+	unsigned int vAcc;      // mm, vertical accuracy estimate
+	int velN;		// mm/s	
+	int velE;		// mm/s
+	int velD;		// mm/s
+	int gSpeed;		// mm/s
+	double headMot;    // deg, scaling is 1e-5, heading of motion (2-D)
+	unsigned int sAcc;		// mm/s, speed accuracy estimate
+	double headAcc;		// deg, scaling is 1e-5, Heading accuracy estimate of motion (2-D)
+	double pPOP;	// scaling is 0.01
+	unsigned char reserved1[6];
+	double headVeh;			// scaling is 1e-5, Heading of vehicle (2-D)
+	double magDec;			// scaling is 1e-2, Magnetic declination
+	double magAcc;	// scaling is 1e-2, Magnetic declination accuracy
+} ubloxNavPvtScaledSTRUCT;
+
+ubloxNavPvtScaledSTRUCT navPvt;
+static int decode_navpvt(raw_t* raw)
+{
+	//ubloxHnrPvtSTRUCT* pHnrPvt = (ubloxHnrPvtSTRUCT*)(&raw->buff[6]);
+	unsigned char* p = raw->buff + 6;
+
+	navPvt.iTOW = U4(p);	//ms
+	navPvt.year = U2(p + 4);		
+	navPvt.month = U1(p + 6);		
+	navPvt.day = U1(p + 7);
+	navPvt.hour = U1(p + 8);
+	navPvt.min = U1(p + 9);
+	navPvt.sec = U1(p + 10);
+	navPvt.valid = U1(p + 11);
+	navPvt.tAcc = U4(p + 12);
+	navPvt.nano = I4(p + 16) * 1.0e-9; //nano, fraction of second, range -1e9..1e9 (UTC), ns
+	navPvt.fixType = U1(p + 20);
+	navPvt.flags = U1(p + 21);
+	navPvt.flags2 = U1(p + 22);
+	navPvt.numSV = U1(p + 23);
+	navPvt.lon = I4(p + 24) * 1.0e-7;
+	navPvt.lat = I4(p + 28) * 1.0e-7;
+	navPvt.height = I4(p + 32);
+	navPvt.hMSL = I4(p + 36);
+	navPvt.hAcc = U4(p + 40);
+	navPvt.vAcc = U4(p + 44);
+	navPvt.velN = I4(p + 48);
+	navPvt.velE = I4(p + 52);
+	navPvt.velD = I4(p + 56);
+	navPvt.gSpeed = I4(p + 60);
+	navPvt.headMot = I4(p + 64) * 1.0e-5;
+	navPvt.sAcc = U4(p + 68);
+	navPvt.headAcc = I4(p + 72) * 1.0e-5;
+	navPvt.pPOP = U2(p + 76)*0.01;
+	// p+76+2+6
+	navPvt.headVeh = I4(p + 84) * 1.0e-5;
+	navPvt.magDec = I2(p + 88) * 1.0e-2;
+	navPvt.magAcc = I2(p + 90) * 1.0e-2;
+
+	// copy data to raw
+
+	return 15;
+}
+
 /* decode ublox raw message --------------------------------------------------*/
 static int decode_ubx(raw_t *raw)
 {
@@ -1477,12 +1728,14 @@ static int decode_ubx(raw_t *raw)
         case ID_RXMSFRBX: return decode_rxmsfrbx(raw);
         case ID_NAVSOL  : return decode_navsol  (raw);
         case ID_NAVTIME : return decode_navtime (raw);
+		case ID_NAVPVT  : return decode_navpvt  (raw);
         case ID_TRKMEAS : return decode_trkmeas (raw);
         case ID_TRKD5   : return decode_trkd5   (raw);
         case ID_TRKSFRBX: return decode_trksfrbx(raw);
         case ID_TIMTM2  : return decode_timtm2  (raw);
 		case ID_HNRPVT	: return decode_hnrpvt(raw);
 		case ID_HNRINS	: return decode_hnrins(raw);
+		case ID_ESFMEAS : return decode_esfmeas(raw);
     }
     if (raw->outtype) {
         sprintf(raw->msgtype,"UBX 0x%02X 0x%02X (%4d)",type>>8,type&0xF,
