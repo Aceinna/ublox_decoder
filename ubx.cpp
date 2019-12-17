@@ -7,6 +7,47 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static void deg2dms(double deg, double* dms)
+{
+	double sign = deg < 0.0 ? -1.0 : 1.0, a = fabs(deg);
+	dms[0] = floor(a); a = (a - dms[0]) * 60.0;
+	dms[1] = floor(a); a = (a - dms[1]) * 60.0;
+	dms[2] = a; dms[0] *= sign;
+}
+
+/* output solution in the form of nmea GGA sentence --------------------------*/
+static int outnmea_gga1(unsigned char* buff, double time, int type, double* blh, int ns, double dop, double age)
+{
+	double h, ep[6], dms1[3], dms2[3];
+	char* p = (char*)buff, * q, sum;
+
+	if (type != 1 && type != 4 && type != 5) {
+		p += sprintf(p, "$GPGGA,,,,,,,,,,,,,,");
+		for (q = (char*)buff + 1, sum = 0; *q; q++) sum ^= *q;
+		p += sprintf(p, "*%02X%c%c", sum, 0x0D, 0x0A);
+		return p - (char*)buff;
+	}
+	time -= 18.0;
+	ep[2] = floor(time / (24 * 3600));
+	time -= ep[2] * 24 * 3600.0;
+	ep[3] = floor(time / 3600);
+	time -= ep[3] * 3600;
+	ep[4] = floor(time / 60);
+	time -= ep[4] * 60;
+	ep[5] = time;
+	h = 0.0;
+	deg2dms(fabs(blh[0]) * 180.0 / PI, dms1);
+	deg2dms(fabs(blh[1]) * 180.0 / PI, dms2);
+	p += sprintf(p, "$GPGGA,%02.0f%02.0f%05.2f,%02.0f%010.7f,%s,%03.0f%010.7f,%s,%d,%02d,%.1f,%.3f,M,%.3f,M,%.1f,",
+		ep[3], ep[4], ep[5], dms1[0], dms1[1] + dms1[2] / 60.0, blh[0] >= 0 ? "N" : "S",
+		dms2[0], dms2[1] + dms2[2] / 60.0, blh[1] >= 0 ? "E" : "W", type,
+		ns, dop, blh[2] - h, h, age);
+	for (q = (char*)buff + 1, sum = 0; *q; q++) sum ^= *q; /* check-sum */
+	p += sprintf(p, "*%02X%c%c", sum, 0x0D, 0x0A);
+	return p - (char*)buff;
+}
+
+
 void decode_ubx(const char* fname)
 {
 	FILE* fdat = NULL;
@@ -22,15 +63,11 @@ void decode_ubx(const char* fname)
 
 	fdat = fopen(fname, "rb"); if (fdat == NULL) return;
 
-	const char* result = strrchr(fname, '\\');
-	if (result != NULL)
-		strncpy(fileName, result + 1, strlen(result));
-	else
-		strncpy(fileName, fname, strlen(fname));
+	strcpy(fileName, fname);
 	char* result1 = strrchr(fileName, '.');
 	if (result1 != NULL) result1[0] = '\0';
 
-	sprintf(outfilename, "%s_imu.txt", fileName); 
+	sprintf(outfilename, "%s_raw.nmea", fileName); 
 
 
 	fimu = fopen(outfilename, "w"); if (fimu == NULL) return;
@@ -42,6 +79,7 @@ void decode_ubx(const char* fname)
 	{
 		if (type == 1)
 		{
+#if 0
 			for (int i = 0; i < raw.obs.n; ++i)
 			{
 				obsd_t* pobs = raw.obs.data + i;
@@ -52,32 +90,45 @@ void decode_ubx(const char* fname)
 				if (fimu != NULL) fprintf(fimu, "1,%4i,%10.4f,%3i,%3i,%14.4f,%14.4f,%10.4f,%4i,%4i\n", wn, ws, sys, prn, pobs->P[0], pobs->L[0], pobs->D[0], pobs->SNR[0], pobs->LLI[0]);
 				//printf("%4i,%10.4f,%3i,%3i,%14.4f,%14.4f,%10.4f\n", wn, ws, sys, prn, prn, pobs->P[0], pobs->L[0], pobs->D[0]);
 			}
+#endif
 		}
 		else if (type == 12)
 		{
+#if 0
 			if (fimu != NULL) fprintf(fimu, "2,%4i,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f\n"
 				, wn
 				, raw.data[17], raw.data[11]
 				, raw.data[12], raw.data[13], raw.data[14], raw.data[15], raw.data[16]);
+#endif
 		}
 		else if (type == 11)
 		{
+			double blh[3] = { raw.data[1] * PI / 180.0, raw.data[2] * PI / 180.0, raw.data[3] };
+			unsigned char buffer[255] = { 0 };
+			outnmea_gga1(buffer, raw.data[0], 1, blh, 10, 1.0, 1.0);
+			if (fimu != NULL) fprintf(fimu, "%s", buffer);
+#if 0
 			if (fimu != NULL) fprintf(fimu, "3,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f\n"
 				, wn
 				, raw.data[0], raw.data[1], raw.data[2], raw.data[3], raw.data[4], raw.data[5]
 				, raw.data[6], raw.data[7], raw.data[8], raw.data[9], raw.data[10]);
+#endif
 		}
 		else if (type == 13)
 		{
+#if 0
 			if (fimu != NULL) fprintf(fimu, "4,%4i,%10.4f,%14.10f,%14.10f,%10.4f\n"
 				, wn
 				, raw.f9k_data[0], raw.f9k_data[1], raw.f9k_data[2], raw.f9k_data[3]);
+#endif
 		}
 		else if (type == 14)
 		{
+#if 0
 			if (fimu != NULL) fprintf(fimu, "5,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f\n"
 				, wn
 				, raw.f9k_data[4], raw.f9k_data[5], raw.f9k_data[6], raw.f9k_data[7], raw.f9k_data[8]);
+#endif
 		}
 		else if (type == 15) // navPvt
 		{
@@ -85,6 +136,7 @@ void decode_ubx(const char* fname)
 		}
 		else if (type == 2)
 		{
+#if 0
 			//printf("%i\n", type);
 			int prn = 0;
 			int sat = raw.ephsat;
@@ -101,6 +153,7 @@ void decode_ubx(const char* fname)
 				if (fimu != NULL) fprintf(fimu, "4,%4i\n"
 					, eph->sat);
 			}
+#endif
 		}
 		else if (type==3)
 		{
@@ -112,7 +165,7 @@ void decode_ubx(const char* fname)
 		}
 		else if (type>0)
 		{
-			printf("%i\n", type);
+			//printf("%i\n", type);
 		}
 	}
 
@@ -215,6 +268,7 @@ void decode_rtcm3(const char* fname, int year, int mon, int day)
 	return;
 }
 
+
 int main(int argc, char* argv[])
 {
     //std::cout << "Hello World!\n";
@@ -231,7 +285,7 @@ int main(int argc, char* argv[])
 		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008385_2019-09-05T22-20-09.ubx");
 
 		//decode_rtcm3("C:\\aceinna\\tesla\\248\\sf01248d01.dat", 2019, 9, 5);
-		decode_ubx("C:\\Users\\40141\\Desktop\\F9K-IMU-data-decoder\\short_data.ubx");
+		decode_ubx("C:\\tesla\\1119\\m8l_psb_in_car_nov19\\ubx_raw_log_010207_2019-11-19T19-03-21.ubx");
 	}
 	else
 	{
