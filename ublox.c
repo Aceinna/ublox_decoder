@@ -78,6 +78,7 @@
 #define ID_NAVTIME  0x0120      /* ubx message id: nav time gps */
 #define ID_NAVPVT	0x0107		/* ubx message id: nav position velocity time */
 #define ID_ESFMEAS 	0x1002		/* ubx message id: esf external sensor fusion */
+#define ID_ESFRAW 	0x1003		/* ubx message id: raw sensor measurements */
 #define ID_RXMRAW   0x0210      /* ubx message id: raw measurement data */
 #define ID_RXMSFRB  0x0211      /* ubx message id: subframe buffer */
 #define ID_RXMSFRBX 0x0213      /* ubx message id: raw subframe data */
@@ -1574,6 +1575,95 @@ static int decode_esfmeas(raw_t* raw)
 
 typedef struct
 {
+	unsigned int timeTag;
+	double xAccel;
+	double yAccel;
+	double zAccel;
+	double xGyroscope;
+	double yGyroscope;
+	double zGyroscope;
+	double tempGyroscope;
+} ubloxEsfRawSTRUCT;
+
+ubloxEsfRawSTRUCT esfRaw[10];
+static int decode_esfraw(raw_t* raw)
+{
+	unsigned char* p = raw->buff + 4;
+	unsigned int lenth = U2(p);
+	int temp = 0;
+
+	p = raw->buff + 6 + 4;
+	if (lenth == 564)
+	{
+		for (int i = 0; i < 10; i++)
+		{
+			esfRaw[i].timeTag = U4(p+4);
+
+			temp = (U4(p) << 8) >> 8;
+			if ((temp & 0x800000) != 0)
+			{
+				temp = 0 - (0xFFFFFF - temp + 1);
+			}
+			esfRaw[i].xAccel = (float)temp / 1024;
+
+			temp = (U4(p + 8) << 8) >> 8;
+			if ((temp & 0x800000) != 0)
+			{
+				temp = 0 - (0xFFFFFF - temp + 1);
+			}
+			esfRaw[i].yAccel = (float)temp / 1024;
+
+			temp = (U4(p + 16) << 8) >> 8;
+			if ((temp & 0x800000) != 0)
+			{
+				temp = 0 - (0xFFFFFF - temp + 1);
+			}
+			esfRaw[i].zAccel = (float)temp / 1024;
+			
+			temp = (U4(p + 24) << 8) >> 8;
+			if ((temp & 0x800000) != 0)
+			{
+				temp = 0 - (0xFFFFFF - temp + 1);
+			}
+			esfRaw[i].xGyroscope = (float)temp / 4096;
+
+			temp = (U4(p + 32) << 8) >> 8;
+			if ((temp & 0x800000) != 0)
+			{
+				temp = 0 - (0xFFFFFF - temp + 1);
+			}
+			esfRaw[i].yGyroscope = (float)temp / 4096;
+
+			temp = (U4(p + 40) << 8) >> 8;
+			if ((temp & 0x800000) != 0)
+			{
+				temp = 0 - (0xFFFFFF - temp + 1);
+			}
+			esfRaw[i].zGyroscope = (float)temp / 4096;
+
+			temp = (U4(p + 48) << 8) >> 8;
+			esfRaw[i].tempGyroscope = (float)temp / 100;
+
+			raw->m8l_esfRaw[i*8]   = esfRaw[i].timeTag;
+			raw->m8l_esfRaw[i*8+1] = esfRaw[i].xAccel;
+			raw->m8l_esfRaw[i*8+2] = esfRaw[i].yAccel;
+			raw->m8l_esfRaw[i*8+3] = esfRaw[i].zAccel;
+			raw->m8l_esfRaw[i*8+4] = esfRaw[i].xGyroscope;
+			raw->m8l_esfRaw[i*8+5] = esfRaw[i].yGyroscope;
+			raw->m8l_esfRaw[i*8+6] = esfRaw[i].zGyroscope;
+			raw->m8l_esfRaw[i*8+7] = esfRaw[i].tempGyroscope;
+
+			p = p + 56;
+		}
+
+		return 16;
+	}
+
+	return 0;
+}
+
+typedef struct
+{
 	unsigned int iTOW;      // ms
 	unsigned short year;
 	unsigned char month;
@@ -1736,6 +1826,7 @@ static int decode_ubx(raw_t *raw)
 		case ID_HNRPVT	: return decode_hnrpvt(raw);
 		case ID_HNRINS	: return decode_hnrins(raw);
 		case ID_ESFMEAS : return decode_esfmeas(raw);
+		case ID_ESFRAW  : return decode_esfraw(raw);
     }
     if (raw->outtype) {
         sprintf(raw->msgtype,"UBX 0x%02X 0x%02X (%4d)",type>>8,type&0xF,

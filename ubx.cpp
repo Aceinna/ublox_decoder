@@ -67,7 +67,7 @@ void decode_ubx(const char* fname)
 	char* result1 = strrchr(fileName, '.');
 	if (result1 != NULL) result1[0] = '\0';
 
-	sprintf(outfilename, "%s_raw.nmea", fileName); 
+	sprintf(outfilename, "%s_raw", fileName); 
 
 
 	fimu = fopen(outfilename, "w"); if (fimu == NULL) return;
@@ -117,22 +117,37 @@ void decode_ubx(const char* fname)
 		else if (type == 13)
 		{
 #if 0
-			if (fimu != NULL) fprintf(fimu, "4,%4i,%10.4f,%14.10f,%14.10f,%10.4f\n"
+			if (fimu != NULL) fprintf(fimu, "4,%4i,%10i,%14.10f,%14.10f,%10.4f\n"
 				, wn
-				, raw.f9k_data[0], raw.f9k_data[1], raw.f9k_data[2], raw.f9k_data[3]);
+				, (int)raw.f9k_data[0], raw.f9k_data[1], raw.f9k_data[2], raw.f9k_data[3]);
 #endif
 		}
 		else if (type == 14)
 		{
 #if 0
-			if (fimu != NULL) fprintf(fimu, "5,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f\n"
+			if (fimu != NULL) fprintf(fimu, "5,%4i,%10i,%14.10f,%14.10f,%10.4f,%10.4f\n"
 				, wn
-				, raw.f9k_data[4], raw.f9k_data[5], raw.f9k_data[6], raw.f9k_data[7], raw.f9k_data[8]);
+				, (int)raw.f9k_data[4], raw.f9k_data[5], raw.f9k_data[6], raw.f9k_data[7], raw.f9k_data[8]);
 #endif
 		}
 		else if (type == 15) // navPvt
 		{
 			
+		}
+		else if (type == 16) //esfRaw
+		{
+#if 1
+			if (fimu != NULL)
+			{
+				for (int i = 0; i < 10; i++)
+				{
+					fprintf(fimu, "6,%4i,%10i,%14.10f,%14.10f,%10.4f,%10.4f,%14.10f,%14.10f,%10.4f\n"
+						, wn
+						, (int)raw.m8l_esfRaw[i*8], raw.m8l_esfRaw[i*8+1], raw.m8l_esfRaw[i*8+2], raw.m8l_esfRaw[i*8+3]
+						, raw.m8l_esfRaw[i*8+4], raw.m8l_esfRaw[i*8+5], raw.m8l_esfRaw[i*8+6], raw.m8l_esfRaw[i*8+7]);
+				}
+			}
+#endif
 		}
 		else if (type == 2)
 		{
