@@ -1788,6 +1788,20 @@ static int decode_navpvt(raw_t* raw)
 	navPvt.magAcc = I2(p + 90) * 1.0e-2;
 
 	// copy data to raw
+	raw->f9k_data[0] = navPvt.iTOW *1e-3;
+	raw->f9k_data[1] = navPvt.lat;
+	raw->f9k_data[2] = navPvt.lon;
+	raw->f9k_data[3] = navPvt.height*1e-3;
+	raw->f9k_data[4] = navPvt.gSpeed * 1e-3;
+	raw->f9k_data[5] = navPvt.headMot;
+	raw->f9k_data[6] = navPvt.headVeh;
+	raw->f9k_data[7] = navPvt.hAcc*1e-3;
+	raw->f9k_data[8] = navPvt.vAcc*1e-3;
+	raw->f9k_data[9] = navPvt.sAcc*1e-3;
+	raw->f9k_data[10] = navPvt.headAcc;
+	raw->f9k_data[11] = navPvt.fixType;
+	raw->f9k_data[12] = navPvt.numSV;
+
 
 	return 15;
 }

@@ -21,7 +21,7 @@ static int outnmea_gga1(unsigned char* buff, double time, int type, double* blh,
 	double h, ep[6], dms1[3], dms2[3];
 	char* p = (char*)buff, * q, sum;
 
-	if (type != 1 && type != 4 && type != 5) {
+	if (type != 1 && type != 4 && type != 5 && 0) {
 		p += sprintf(p, "$GPGGA,,,,,,,,,,,,,,");
 		for (q = (char*)buff + 1, sum = 0; *q; q++) sum ^= *q;
 		p += sprintf(p, "*%02X%c%c", sum, 0x0D, 0x0A);
@@ -52,6 +52,7 @@ void decode_ubx(const char* fname)
 {
 	FILE* fdat = NULL;
 	FILE* fimu = NULL;
+	FILE* fpvt = NULL; // u-blox own solution
 
 	raw_t raw;
 	if (!init_raw(&raw, STRFMT_UBX)) {
@@ -67,10 +68,12 @@ void decode_ubx(const char* fname)
 	char* result1 = strrchr(fileName, '.');
 	if (result1 != NULL) result1[0] = '\0';
 
-	sprintf(outfilename, "%s_raw", fileName); 
-
-
+	sprintf(outfilename, "%s_raw", fileName);
 	fimu = fopen(outfilename, "w"); if (fimu == NULL) return;
+
+	memset(outfilename, 0, 255 * sizeof(char));
+	sprintf(outfilename, "%s_pvt.nmea", fileName);
+	fpvt = fopen(outfilename, "w"); if (fpvt == NULL) return;
 
 	int type = 0;
 	int wn = 0;
@@ -132,7 +135,11 @@ void decode_ubx(const char* fname)
 		}
 		else if (type == 15) // navPvt
 		{
-			
+			double blh[3] = { raw.f9k_data[1] * PI / 180.0, raw.f9k_data[2] * PI / 180.0, raw.f9k_data[3] };
+			unsigned char buffer[255] = { 0 };
+			if (fabs(blh[0] * blh[1]) < 1e-7) continue;
+			outnmea_gga1(buffer, raw.f9k_data[0], raw.f9k_data[11], blh, raw.f9k_data[12], 1.0, 1.0);
+			if (fpvt != NULL) fprintf(fpvt, "%s", buffer);
 		}
 		else if (type == 16) //esfRaw
 		{
