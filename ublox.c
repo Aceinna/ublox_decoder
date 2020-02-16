@@ -1344,6 +1344,7 @@ static int decode_hnrpvt(raw_t* raw)
 	raw->data[8] = hnrPvt.vAcc * 1e-3;
 	raw->data[9] = hnrPvt.sAcc * 1e-3;
 	raw->data[10] = hnrPvt.headAcc;
+	raw->data[11] = hnrPvt.gpsFix;
 
 	//printf("%.3f,%.10f,%.10f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,",
 	//	hnrPvt.itow / 1000.0, hnrPvt.lat, hnrPvt.lon, hnrPvt.height * 1e-3,

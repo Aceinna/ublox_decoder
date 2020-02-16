@@ -108,7 +108,7 @@ void decode_ubx(const char* fname)
 		{
 			double blh[3] = { raw.data[1] * PI / 180.0, raw.data[2] * PI / 180.0, raw.data[3] };
 			unsigned char buffer[255] = { 0 };
-			outnmea_gga1(buffer, raw.data[0], 1, blh, 10, 1.0, 1.0);
+			outnmea_gga1(buffer, raw.data[0], raw.data[11], blh, 10, 1.0, 1.0);
 			if (fimu != NULL) fprintf(fimu, "%s", buffer);
 #if 0
 			if (fimu != NULL) fprintf(fimu, "3,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f\n"
