@@ -1275,6 +1275,7 @@ typedef struct half_cyc_tag {  /* half-cycle correction list type */
 
 typedef struct {        /* receiver raw data control type */
     gtime_t time;       /* message time */
+	gtime_t time_pvt;   /* message time of pvt */
     gtime_t tobs[MAXSAT][NFREQ+NEXOBS]; /* observation data time */
     obs_t obs;          /* observation data */
     obs_t obuf;         /* observation data buffer */

@@ -21,7 +21,7 @@ static int outnmea_gga1(unsigned char* buff, double time, int type, double* blh,
 	double h, ep[6], dms1[3], dms2[3];
 	char* p = (char*)buff, *q, sum;
 
-	if (type != 1 && type != 2 && type != 4 && type != 5) {
+	if (type == 0) {
 		/* if type==0, output none */
 		return 0;
 		/*p += sprintf(p, "$GPGGA,,,,,,,,,,,,,,");
@@ -55,6 +55,7 @@ void decode_ubx(const char* fname)
 	FILE* fdat = NULL;
 	FILE* fimu = NULL;
 	FILE* fpvt = NULL; // u-blox own solution
+	FILE* fscv = NULL; // u-blox csv solution
 
 	raw_t raw;
 	if (!init_raw(&raw, STRFMT_UBX)) {
@@ -77,6 +78,15 @@ void decode_ubx(const char* fname)
 	sprintf(outfilename, "%s_pvt.nmea", fileName);
 	fpvt = fopen(outfilename, "w"); if (fpvt == NULL) return;
 
+	memset(outfilename, 0, 255 * sizeof(char));
+	sprintf(outfilename, "%s_pvt.csv", fileName);
+	fscv = fopen(outfilename, "w"); if (fscv == NULL) return;
+
+	fprintf(fscv, "GPS_week,week second in ms,Error_N,Error_E,Error_U,Error_2D,Error_3D,Corrections Valid,\
+Latitude,Longitude,Height_ell_m,HDOP,PDOP,Num_Sattelites,\
+SDEast_m,SDNorth_m,SDHeight_m,\
+VelEast,VelNorth,VelHeight,SDVelEast_m,SDVelNorth_m,SDVelHeight_m,\
+Heading_deg,Heading_Acc_deg,Accuracy\n");
 	int type = 0;
 	int wn = 0;
 
@@ -110,9 +120,9 @@ void decode_ubx(const char* fname)
 		{
 			double blh[3] = { raw.data[1] * PI / 180.0, raw.data[2] * PI / 180.0, raw.data[3] };
 			unsigned char buffer[255] = { 0 };
-			outnmea_gga1(buffer, raw.data[0], raw.data[11], blh, 10, 1.0, 1.0);
-			if (fimu != NULL) fprintf(fimu, "%s", buffer);
-#if 0
+			// outnmea_gga1(buffer, raw.data[0], raw.data[11], blh, 10, 1.0, 1.0);
+			// if (fimu != NULL) fprintf(fimu, "%s", buffer);
+#if 1
 			if (fimu != NULL) fprintf(fimu, "3,%4i,%10.4f,%14.10f,%14.10f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f\n"
 				, wn
 				, raw.data[0], raw.data[1], raw.data[2], raw.data[3], raw.data[4], raw.data[5]
@@ -140,8 +150,23 @@ void decode_ubx(const char* fname)
 			double blh[3] = { raw.f9k_data[1] * PI / 180.0, raw.f9k_data[2] * PI / 180.0, raw.f9k_data[3] };
 			unsigned char buffer[255] = { 0 };
 			if (fabs(blh[0] * blh[1]) < 1e-7) continue;
-			outnmea_gga1(buffer, raw.f9k_data[0], (int)raw.f9k_data[11], blh, (int)raw.f9k_data[12], 1.0, 1.0);
+			time2gpst(raw.time_pvt, &wn);
+			outnmea_gga1(buffer, raw.f9k_data[0], (int)raw.f9k_data[14], blh, (int)raw.f9k_data[15], 1.0, 1.0);
 			if (fpvt != NULL) fprintf(fpvt, "%s", buffer);
+#if 1
+			if (fscv != NULL) fprintf(fscv, "%4d,%12.0f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%d,\
+%12.7f,%12.7f,%10.4f,%6.2f,%6.2f,\
+%2d,\
+%10.4f,%10.4f,%10.4f,\
+%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,\
+%12.7f,%12.7f,%2d\n"
+				, wn, raw.f9k_data[0]*1000, 0.0, 0.0, 0.0, 0.0, 0.0, 0
+				, raw.f9k_data[1], raw.f9k_data[2], raw.f9k_data[3], 0.0, raw.f9k_data[16]
+				, (int)raw.f9k_data[15]
+				, 0.0, raw.f9k_data[7], raw.f9k_data[8]
+				, raw.f9k_data[9], raw.f9k_data[10], raw.f9k_data[11], 0.0, 0.0, raw.f9k_data[12]
+			    , raw.f9k_data[5], raw.f9k_data[13], (int)raw.f9k_data[14]);
+#endif
 		}
 		else if (type == 16) //esfRaw
 		{
@@ -150,7 +175,7 @@ void decode_ubx(const char* fname)
 			{
 				for (int i = 0; i < 10; i++)
 				{
-					fprintf(fimu, "6,%4i,%10i,%14.10f,%14.10f,%10.4f,%10.4f,%14.10f,%14.10f,%10.4f\n"
+					fprintf(fimu, "7,%4i,%10i,%14.10f,%14.10f,%10.4f,%10.4f,%14.10f,%14.10f,%10.4f\n"
 						, wn
 						, (int)raw.m8l_esfRaw[i * 8], raw.m8l_esfRaw[i * 8 + 1], raw.m8l_esfRaw[i * 8 + 2], raw.m8l_esfRaw[i * 8 + 3]
 						, raw.m8l_esfRaw[i * 8 + 4], raw.m8l_esfRaw[i * 8 + 5], raw.m8l_esfRaw[i * 8 + 6], raw.m8l_esfRaw[i * 8 + 7]);
@@ -298,18 +323,8 @@ int main(int argc, char* argv[])
 	//std::cout << "Hello World!\n";
 	if (argc < 2)
 	{
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008377_2019-09-05T15-27-42.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008378_2019-09-05T16-32-41.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008379_2019-09-05T17-41-08.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008380_2019-09-05T18-28-32.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008381_2019-09-05T19-14-37.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008382_2019-09-05T20-00-31.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008383_2019-09-05T20-49-50.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008384_2019-09-05T21-35-09.ubx");
-		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008385_2019-09-05T22-20-09.ubx");
-
-		//decode_rtcm3("C:\\aceinna\\tesla\\248\\sf01248d01.dat", 2019, 9, 5);
 		decode_ubx("E:\\test\\data\\20200228\\strsvr_Rover_M8P_01.ubx");
+
 	}
 	else
 	{

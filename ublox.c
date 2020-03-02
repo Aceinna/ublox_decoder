@@ -1755,20 +1755,33 @@ static int decode_navpvt(raw_t* raw)
 {
 	//ubloxHnrPvtSTRUCT* pHnrPvt = (ubloxHnrPvtSTRUCT*)(&raw->buff[6]);
 	unsigned char* p = raw->buff + 6;
-	int carrSoln, diffSoln, gnssFixOK;
+	int carrSoln, diffSoln, gnssFixOK, fix_Status;
 	char flags;
+	int week;
+	double ep[6] = { 0 };
 
-	navPvt.iTOW = U4(p);	//ms
+	navPvt.iTOW = U4(p) * 1e-3;	//ms
 	navPvt.year = U2(p + 4);
 	navPvt.month = U1(p + 6);
 	navPvt.day = U1(p + 7);
 	navPvt.hour = U1(p + 8);
 	navPvt.min = U1(p + 9);
 	navPvt.sec = U1(p + 10);
+	ep[0] = navPvt.year;
+	ep[1] = navPvt.month;
+	ep[2] = navPvt.day;
+	ep[3] = navPvt.year;
+	ep[4] = navPvt.hour;
+	ep[5] = navPvt.sec;
 	navPvt.valid = U1(p + 11);
+	if (navPvt.valid & 1)
+	{
+		time2gpst(epoch2time(ep), &week);
+		raw->time_pvt = gpst2time(week, navPvt.iTOW);
+	}
 	navPvt.tAcc = U4(p + 12);
 	navPvt.nano = I4(p + 16) * 1.0e-9; //nano, fraction of second, range -1e9..1e9 (UTC), ns
-	//navPvt.fixType = U1(p + 20);
+	navPvt.fixType = U1(p + 20);
 	navPvt.flags = U1(p + 21);
 	navPvt.flags2 = U1(p + 22);
 	flags = U1(p + 21);
@@ -1776,26 +1789,43 @@ static int decode_navpvt(raw_t* raw)
 	carrSoln = (flags >> 6) & 3;
 	diffSoln = flags & 2;
 	gnssFixOK = flags & 1;
+
+#if  1
 	if (carrSoln == 2 && diffSoln && gnssFixOK)
 	{
-		navPvt.fixType = 4;
+		fix_Status = 4;
 	}
 	else if (carrSoln == 1 && diffSoln && gnssFixOK)
 	{
-		navPvt.fixType = 5;
+		fix_Status = 5;
 	}
 	else if (diffSoln && gnssFixOK)
 	{
-		navPvt.fixType = 2;
+		fix_Status = 2;
 	}
 	else if (gnssFixOK)
 	{
-		navPvt.fixType = 1;
+		fix_Status = 1;
 	}
 	else
 	{
-		navPvt.fixType = 0;
+		fix_Status = 0;
 	}
+	/* add dead reckoning(3) & combined solution(6) */
+	if (navPvt.fixType == 1 && fix_Status)
+	{
+		navPvt.fixType = 3;
+	}
+	else if (navPvt.fixType == 4 && fix_Status)
+	{
+		navPvt.fixType = 6;
+	}
+	else
+	{
+		navPvt.fixType = (unsigned char)fix_Status;
+	}
+#endif 
+
 	navPvt.numSV = U1(p + 23);
 	navPvt.lon = I4(p + 24) * 1.0e-7;
 	navPvt.lat = I4(p + 28) * 1.0e-7;
@@ -1817,19 +1847,23 @@ static int decode_navpvt(raw_t* raw)
 	navPvt.magAcc = I2(p + 90) * 1.0e-2;
 
 	// copy data to raw
-	raw->f9k_data[0] = navPvt.iTOW *1e-3;
+	raw->f9k_data[0] = navPvt.iTOW;
 	raw->f9k_data[1] = navPvt.lat;
 	raw->f9k_data[2] = navPvt.lon;
-	raw->f9k_data[3] = navPvt.height*1e-3;
+	raw->f9k_data[3] = navPvt.height * 1e-3;
 	raw->f9k_data[4] = navPvt.gSpeed * 1e-3;
 	raw->f9k_data[5] = navPvt.headMot;
 	raw->f9k_data[6] = navPvt.headVeh;
-	raw->f9k_data[7] = navPvt.hAcc*1e-3;
-	raw->f9k_data[8] = navPvt.vAcc*1e-3;
-	raw->f9k_data[9] = navPvt.sAcc*1e-3;
-	raw->f9k_data[10] = navPvt.headAcc;
-	raw->f9k_data[11] = navPvt.fixType;
-	raw->f9k_data[12] = navPvt.numSV;
+	raw->f9k_data[7] = navPvt.hAcc * 1e-3;
+	raw->f9k_data[8] = navPvt.vAcc * 1e-3;
+	raw->f9k_data[9] = navPvt.velN * 1e-3;
+	raw->f9k_data[10] = navPvt.velE * 1e-3;
+	raw->f9k_data[11] = navPvt.velD * 1e-3;
+	raw->f9k_data[12] = navPvt.sAcc * 1e-3;
+	raw->f9k_data[13] = navPvt.headAcc;
+	raw->f9k_data[14] = navPvt.fixType;
+	raw->f9k_data[15] = navPvt.numSV;
+	raw->f9k_data[16] = navPvt.pPOP;
 
 
 	return 15;
@@ -1854,6 +1888,7 @@ static int decode_ubx(raw_t *raw)
 		trace(2, "ubx checksum error: type=%04x len=%d\n", type, raw->len);
 		return -1;
 	}
+	//printf("%x %x\r\n", U1(raw->buff + 2), U1(raw->buff + 3));
 	switch (type) {
 	case ID_RXMRAW: return decode_rxmraw(raw);
 	case ID_RXMRAWX: return decode_rxmrawx(raw);
