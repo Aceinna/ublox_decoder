@@ -19,13 +19,15 @@ static void deg2dms(double deg, double* dms)
 static int outnmea_gga1(unsigned char* buff, double time, int type, double* blh, int ns, double dop, double age)
 {
 	double h, ep[6], dms1[3], dms2[3];
-	char* p = (char*)buff, * q, sum;
+	char* p = (char*)buff, *q, sum;
 
-	if (type != 1 && type != 4 && type != 5 && 0) {
-		p += sprintf(p, "$GPGGA,,,,,,,,,,,,,,");
+	if (type != 1 && type != 2 && type != 4 && type != 5) {
+		/* if type==0, output none */
+		return 0;
+		/*p += sprintf(p, "$GPGGA,,,,,,,,,,,,,,");
 		for (q = (char*)buff + 1, sum = 0; *q; q++) sum ^= *q;
 		p += sprintf(p, "*%02X%c%c", sum, 0x0D, 0x0A);
-		return p - (char*)buff;
+		return p - (char*)buff;*/
 	}
 	time -= 18.0;
 	ep[2] = floor(time / (24 * 3600));
@@ -78,7 +80,7 @@ void decode_ubx(const char* fname)
 	int type = 0;
 	int wn = 0;
 
-	while ((type=input_rawf(&raw, STRFMT_UBX, fdat))>=-1)
+	while ((type = input_rawf(&raw, STRFMT_UBX, fdat)) >= -1)
 	{
 		if (type == 1)
 		{
@@ -138,7 +140,7 @@ void decode_ubx(const char* fname)
 			double blh[3] = { raw.f9k_data[1] * PI / 180.0, raw.f9k_data[2] * PI / 180.0, raw.f9k_data[3] };
 			unsigned char buffer[255] = { 0 };
 			if (fabs(blh[0] * blh[1]) < 1e-7) continue;
-			outnmea_gga1(buffer, raw.f9k_data[0], raw.f9k_data[11], blh, raw.f9k_data[12], 1.0, 1.0);
+			outnmea_gga1(buffer, raw.f9k_data[0], (int)raw.f9k_data[11], blh, (int)raw.f9k_data[12], 1.0, 1.0);
 			if (fpvt != NULL) fprintf(fpvt, "%s", buffer);
 		}
 		else if (type == 16) //esfRaw
@@ -150,8 +152,8 @@ void decode_ubx(const char* fname)
 				{
 					fprintf(fimu, "6,%4i,%10i,%14.10f,%14.10f,%10.4f,%10.4f,%14.10f,%14.10f,%10.4f\n"
 						, wn
-						, (int)raw.m8l_esfRaw[i*8], raw.m8l_esfRaw[i*8+1], raw.m8l_esfRaw[i*8+2], raw.m8l_esfRaw[i*8+3]
-						, raw.m8l_esfRaw[i*8+4], raw.m8l_esfRaw[i*8+5], raw.m8l_esfRaw[i*8+6], raw.m8l_esfRaw[i*8+7]);
+						, (int)raw.m8l_esfRaw[i * 8], raw.m8l_esfRaw[i * 8 + 1], raw.m8l_esfRaw[i * 8 + 2], raw.m8l_esfRaw[i * 8 + 3]
+						, raw.m8l_esfRaw[i * 8 + 4], raw.m8l_esfRaw[i * 8 + 5], raw.m8l_esfRaw[i * 8 + 6], raw.m8l_esfRaw[i * 8 + 7]);
 				}
 			}
 #endif
@@ -169,7 +171,7 @@ void decode_ubx(const char* fname)
 				if (fimu != NULL) fprintf(fimu, "4,%4i\n"
 					, eph->sat);
 			}
-			else if (sys==SYS_GPS||sys==SYS_GAL||sys==SYS_CMP)
+			else if (sys == SYS_GPS || sys == SYS_GAL || sys == SYS_CMP)
 			{
 				eph_t* eph = raw.nav.eph + sat - 1;
 				if (fimu != NULL) fprintf(fimu, "4,%4i\n"
@@ -177,7 +179,7 @@ void decode_ubx(const char* fname)
 			}
 #endif
 		}
-		else if (type==3)
+		else if (type == 3)
 		{
 			//printf("%i\n", type);
 		}
@@ -185,7 +187,7 @@ void decode_ubx(const char* fname)
 		{
 			//printf("%i\n", type);
 		}
-		else if (type>0)
+		else if (type > 0)
 		{
 			//printf("%i\n", type);
 		}
@@ -293,7 +295,7 @@ void decode_rtcm3(const char* fname, int year, int mon, int day)
 
 int main(int argc, char* argv[])
 {
-    //std::cout << "Hello World!\n";
+	//std::cout << "Hello World!\n";
 	if (argc < 2)
 	{
 		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008377_2019-09-05T15-27-42.ubx");
@@ -307,7 +309,7 @@ int main(int argc, char* argv[])
 		//decode_ubx("C:\\aceinna\\tesla\\248\\m8\\ubx\\ubx_raw_log_008385_2019-09-05T22-20-09.ubx");
 
 		//decode_rtcm3("C:\\aceinna\\tesla\\248\\sf01248d01.dat", 2019, 9, 5);
-		decode_ubx("C:\\tesla\\1119\\m8l_psb_in_car_nov19\\ubx_raw_log_010207_2019-11-19T19-03-21.ubx");
+		decode_ubx("E:\\test\\data\\20200228\\strsvr_Rover_M8P_01.ubx");
 	}
 	else
 	{
