@@ -1770,8 +1770,8 @@ static int decode_navpvt(raw_t* raw)
 	ep[0] = navPvt.year;
 	ep[1] = navPvt.month;
 	ep[2] = navPvt.day;
-	ep[3] = navPvt.year;
-	ep[4] = navPvt.hour;
+	ep[3] = navPvt.hour;
+	ep[4] = navPvt.min;
 	ep[5] = navPvt.sec;
 	navPvt.valid = U1(p + 11);
 	if (navPvt.valid & 1)
@@ -1864,7 +1864,6 @@ static int decode_navpvt(raw_t* raw)
 	raw->f9k_data[14] = navPvt.fixType;
 	raw->f9k_data[15] = navPvt.numSV;
 	raw->f9k_data[16] = navPvt.pPOP;
-
 
 	return 15;
 }
