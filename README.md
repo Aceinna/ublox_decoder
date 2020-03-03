@@ -10,3 +10,10 @@ The output includes
 
 add a RTCM decoder for easily use
 
+Define solution type:
+  Status 1: SPP solution.
+  Status 2: DGNSS solution.
+  Status 3: Dead reckoning only.
+  Status 4: Carrier phase range solution with fixed ambiguities.
+  Status 5: Carrier phase range solution with floating ambiguities.
+  Status 6: GNSS + dead reckoning combined solution.
