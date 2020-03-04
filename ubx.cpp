@@ -149,9 +149,15 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 		{
 			double blh[3] = { raw.f9k_data[1] * PI / 180.0, raw.f9k_data[2] * PI / 180.0, raw.f9k_data[3] };
 			unsigned char buffer[255] = { 0 };
+			int retgga = 0;
+
 			if (fabs(blh[0] * blh[1]) < 1e-7) continue;
 			time2gpst(raw.time_pvt, &wn);
-			outnmea_gga1(buffer, raw.f9k_data[0], (int)raw.f9k_data[14], blh, (int)raw.f9k_data[15], 1.0, 1.0);
+			retgga = outnmea_gga1(buffer, raw.f9k_data[0], (int)raw.f9k_data[14], blh, (int)raw.f9k_data[15], 1.0, 1.0);
+			if (!retgga)
+			{
+				continue;
+			}
 			if (fpvt != NULL) fprintf(fpvt, "%s", buffer);
 #if 1
 			if (fscv != NULL) fprintf(fscv, "%4d,%12.0f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%d,\
@@ -323,12 +329,12 @@ int main(int argc, char* argv[])
 	//std::cout << "Hello World!\n";
 	if (argc < 2)
 	{
-		decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010381_2019-12-04T17-41-39.ubx");
-		decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010382_2019-12-04T18-44-04.ubx");
-		decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010383_2019-12-04T19-30-46.ubx");
-		decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010384_2019-12-04T20-12-38.ubx");
-		decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010385_2019-12-04T20-55-55.ubx");
-		decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010386_2019-12-04T21-38-54.ubx");
+		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010381_2019-12-04T17-41-39.ubx");
+		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010382_2019-12-04T18-44-04.ubx");
+		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010383_2019-12-04T19-30-46.ubx");
+		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010384_2019-12-04T20-12-38.ubx");
+		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010385_2019-12-04T20-55-55.ubx");
+		decode_ubx("E:\\test\\data\\20200304\\COM27_200304_014221.ubx");
 	}
 	else
 	{
