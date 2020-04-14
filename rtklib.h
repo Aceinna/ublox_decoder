@@ -1273,6 +1273,18 @@ typedef struct half_cyc_tag {  /* half-cycle correction list type */
     struct half_cyc_tag *next; /* pointer to next correction */
 } half_cyc_t;
 
+typedef struct
+{
+	unsigned int timeTag;
+	unsigned short flags;
+	unsigned short id;
+
+	unsigned int direction;
+	unsigned int single_tick;
+
+	unsigned int calibTtag;
+} ubloxEsfMeas_speed_STRUCT;
+
 typedef struct {        /* receiver raw data control type */
     gtime_t time;       /* message time */
 	gtime_t time_pvt;   /* message time of pvt */
@@ -1307,6 +1319,8 @@ typedef struct {        /* receiver raw data control type */
     void *rcv_data;     /* receiver dependent data */
 	double data[30];	/* temp to store ublox IMU data */
 	double f9k_data[30]; /* temp to store f9k IMU data */
+	double m8l_esfmeas[12];
+	ubloxEsfMeas_speed_STRUCT esfmeas_speed;
 	double m8l_esfRaw[80];
 } raw_t;
 

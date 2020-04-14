@@ -145,6 +145,17 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 				, (int)raw.f9k_data[4], raw.f9k_data[5], raw.f9k_data[6], raw.f9k_data[7], raw.f9k_data[8]);
 #endif
 		}
+		else if (type == 17)
+		{
+#if 1
+			//raw.esfmeas_speed.timeTag
+			//raw.esfmeas_speed.direction
+			//raw.esfmeas_speed.single_tick
+			if (fimu != NULL) fprintf(fimu, "6,%4i,%10i,%4i,%14d\n"
+				, wn
+				, raw.esfmeas_speed.timeTag, raw.esfmeas_speed.direction, raw.esfmeas_speed.single_tick);
+#endif
+		}
 		else if (type == 15) // navPvt
 		{
 			double blh[3] = { raw.f9k_data[1] * PI / 180.0, raw.f9k_data[2] * PI / 180.0, raw.f9k_data[3] };
@@ -334,7 +345,7 @@ int main(int argc, char* argv[])
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010383_2019-12-04T19-30-46.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010384_2019-12-04T20-12-38.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010385_2019-12-04T20-55-55.ubx");
-		decode_ubx("E:\\test\\data\\20200304\\COM27_200304_014221.ubx");
+		decode_ubx("C:\\Users\\yumingjin\\Desktop\\ymj\\5-ublox\\M8L\\11\\ubx_raw_log_010288_2019-11-26T19-14-37.ubx");
 	}
 	else
 	{

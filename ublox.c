@@ -1456,6 +1456,19 @@ static int decode_hnrins(raw_t* raw)
 	return 12;
 }
 
+/*
+typedef struct
+{
+	unsigned int timeTag;
+	unsigned short flags;
+	unsigned short id;
+	
+	unsigned int direction;
+	unsigned int single_tick;
+
+	unsigned int calibTtag;
+} ubloxEsfMeas_speed_STRUCT;
+*/
 
 typedef struct
 {
@@ -1484,6 +1497,7 @@ typedef struct
 	unsigned int calibTtag;
 } ubloxEsfMeas_gyro_STRUCT;
 
+ubloxEsfMeas_speed_STRUCT esfMeas_speed;
 ubloxEsfMeas_accel_STRUCT esfMeas_accel;
 ubloxEsfMeas_gyro_STRUCT esfMeas_gyro;
 static int decode_esfmeas(raw_t* raw)
@@ -1493,7 +1507,32 @@ static int decode_esfmeas(raw_t* raw)
 	int temp = 0;
 
 	p = raw->buff + 6;
-	if (lenth == 0x18)
+	if (lenth == 0x10)
+	{
+		esfMeas_speed.timeTag = U4(p);
+		esfMeas_speed.flags = U2(p + 4);
+		esfMeas_speed.id = U2(p + 6);
+
+		temp = U4(p + 8);
+
+		if ((temp & (1 << 23)))
+		{
+			esfMeas_speed.direction = 1; // backward
+		}
+		else
+		{
+			esfMeas_speed.direction = 0; // forward
+		}
+
+		esfMeas_speed.single_tick = temp & 0x7ff;
+
+		esfMeas_speed.calibTtag = U4(p + 12);
+
+		raw->esfmeas_speed = esfMeas_speed;
+
+		return 17;
+	}
+	else if (lenth == 0x18)
 	{
 		esfMeas_accel.timeTag = U4(p);
 		esfMeas_accel.flags = U2(p + 4);
@@ -1526,6 +1565,11 @@ static int decode_esfmeas(raw_t* raw)
 		raw->f9k_data[1] = esfMeas_accel.xAccel;
 		raw->f9k_data[2] = esfMeas_accel.yAccel;
 		raw->f9k_data[3] = esfMeas_accel.zAccel;
+
+		raw->m8l_esfmeas[0] = esfMeas_accel.timeTag;
+		raw->m8l_esfmeas[1] = esfMeas_accel.xAccel;
+		raw->m8l_esfmeas[2] = esfMeas_accel.yAccel;
+		raw->m8l_esfmeas[3] = esfMeas_accel.zAccel;
 
 		return 13;
 	}
@@ -1566,6 +1610,12 @@ static int decode_esfmeas(raw_t* raw)
 		raw->f9k_data[6] = esfMeas_gyro.yGyroscope;
 		raw->f9k_data[7] = esfMeas_gyro.zGyroscope;
 		raw->f9k_data[8] = esfMeas_gyro.tempGyroscope;
+
+		raw->m8l_esfmeas[4] = esfMeas_gyro.timeTag;
+		raw->m8l_esfmeas[5] = esfMeas_gyro.xGyroscope;
+		raw->m8l_esfmeas[6] = esfMeas_gyro.yGyroscope;
+		raw->m8l_esfmeas[7] = esfMeas_gyro.zGyroscope;
+		raw->m8l_esfmeas[8] = esfMeas_gyro.tempGyroscope;
 
 		return 14;
 	}
