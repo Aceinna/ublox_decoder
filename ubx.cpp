@@ -86,7 +86,7 @@ void decode_ubx(const char* fname)
 	fpvt = fopen(outfilename, "w"); if (fpvt == NULL) return;
 
 	memset(outfilename, 0, 255 * sizeof(char));
-	sprintf(outfilename, "%s_ins.kml", fileName);
+	sprintf(outfilename, "%s_navpvt.kml", fileName);
 	fkml = fopen(outfilename, "w"); if (fkml == NULL) return;
 
 	//B-G-R white green light-yellow  red yellow cyan

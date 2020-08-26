@@ -1932,7 +1932,7 @@ static int decode_navpvt(raw_t* raw)
 	navPvt.magAcc = I2(p + 90) * 1.0e-2;
 
 	// copy data to raw
-	raw->f9k_data[0] = navPvt.iTOW;
+	raw->f9k_data[0] = navPvt.iTOW + navPvt.nano;
 	raw->f9k_data[1] = navPvt.lat;
 	raw->f9k_data[2] = navPvt.lon;
 	raw->f9k_data[3] = navPvt.height * 1e-3;
