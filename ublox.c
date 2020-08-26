@@ -75,6 +75,7 @@
 #define PREAMB_CNAV 0x8B        /* cnav preamble */
 
 #define ID_NAVSOL   0x0106      /* ubx message id: nav solution info */
+#define ID_NAVATT	0x0105		/* Attitude */
 #define ID_NAVTIME  0x0120      /* ubx message id: nav time gps */
 #define ID_NAVPVT	0x0107		/* ubx message id: nav position velocity time */
 #define ID_ESFMEAS 	0x1002		/* ubx message id: esf external sensor fusion */
@@ -1714,6 +1715,22 @@ static int decode_esfraw(raw_t* raw)
 	return 0;
 }
 
+
+/* F9K */
+typedef struct
+{
+	unsigned int iTOW;      // ms
+	unsigned char version;
+	unsigned char reserved0[3];
+	int roll;
+	int pitch;
+	int heading;
+	unsigned int accRoll;
+	unsigned int accPitch;
+	unsigned int accHeading;
+
+}f9_navatt_t;
+
 typedef struct
 {
 	unsigned int iTOW;      // ms
@@ -1801,6 +1818,24 @@ typedef struct
 } ubloxNavPvtScaledSTRUCT;
 
 ubloxNavPvtScaledSTRUCT navPvt;
+f9_navatt_t navAtt;
+static int decode_navatt(raw_t* raw)
+{
+	unsigned char* p = raw->buff + 6;
+
+	navAtt.iTOW = U4(p) * 1e-3;	// s
+
+	navAtt.roll = I4(p + 8)*1e-5; // deg
+	navAtt.pitch = I4(p + 12)*1e-5; // deg
+	navAtt.heading = I4(p + 16)*1e-5; // deg
+
+	navAtt.accRoll = U4(p + 20)*1e-5; // deg
+	navAtt.accPitch = U4(p + 24)*1e-5; // deg
+	navAtt.accHeading = U4(p + 28)*1e-5; // deg
+}
+
+
+
 static int decode_navpvt(raw_t* raw)
 {
 	//ubloxHnrPvtSTRUCT* pHnrPvt = (ubloxHnrPvtSTRUCT*)(&raw->buff[6]);
@@ -1944,6 +1979,7 @@ static int decode_ubx(raw_t *raw)
 	case ID_RXMSFRB: return decode_rxmsfrb(raw);
 	case ID_RXMSFRBX: return decode_rxmsfrbx(raw);
 	case ID_NAVSOL: return decode_navsol(raw);
+	case ID_NAVATT: return decode_navatt(raw);
 	case ID_NAVTIME: return decode_navtime(raw);
 	case ID_NAVPVT: return decode_navpvt(raw);
 	case ID_TRKMEAS: return decode_trkmeas(raw);

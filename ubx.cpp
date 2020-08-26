@@ -7,6 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define HEADKML1 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+#define HEADKML2 "<kml xmlns=\"http://www.opengis.net/kml/2.2\">"
+#define MARKICON "http://maps.google.com/mapfiles/kml/shapes/track.png"
+#define SIZP     0.4            /* mark size of rover positions */
+#define SIZR     0.8            /* mark size of reference position */
+
 static void deg2dms(double deg, double* dms)
 {
 	double sign = deg < 0.0 ? -1.0 : 1.0, a = fabs(deg);
@@ -56,6 +62,7 @@ void decode_ubx(const char* fname)
 	FILE* fimu = NULL;
 	FILE* fpvt = NULL; // u-blox own solution
 	FILE* fscv = NULL; // u-blox csv solution
+	FILE* fkml = NULL;
 
 	raw_t raw;
 	if (!init_raw(&raw, STRFMT_UBX)) {
@@ -79,6 +86,24 @@ void decode_ubx(const char* fname)
 	fpvt = fopen(outfilename, "w"); if (fpvt == NULL) return;
 
 	memset(outfilename, 0, 255 * sizeof(char));
+	sprintf(outfilename, "%s_ins.kml", fileName);
+	fkml = fopen(outfilename, "w"); if (fkml == NULL) return;
+
+	//B-G-R white green light-yellow  red yellow cyan
+	const char *color[] = {"ffffffff","ff008800","ff00aaff","ff0000ff","ff00ffff","ffff00ff"};  
+	fprintf(fkml, "%s\n%s\n", HEADKML1, HEADKML2);
+	fprintf(fkml, "<Document>\n");
+	for (int i = 0; i < 6; i++) {
+		fprintf(fkml, "<Style id=\"P%d\">\n", i);
+		fprintf(fkml, "  <IconStyle>\n");
+		fprintf(fkml, "    <color>%s</color>\n", color[i]);
+		fprintf(fkml, "    <scale>%.1f</scale>\n", i == 0 ? SIZR : SIZP);
+		fprintf(fkml, "    <Icon><href>%s</href></Icon>\n", MARKICON);
+		fprintf(fkml, "  </IconStyle>\n");
+		fprintf(fkml, "</Style>\n");
+	}
+
+	memset(outfilename, 0, 255 * sizeof(char));
 	sprintf(outfilename, "%s_pvt.csv", fileName);
 	fscv = fopen(outfilename, "w"); if (fscv == NULL) return;
 
@@ -87,6 +112,7 @@ Latitude,Longitude,Height_ell_m,HDOP,PDOP,Num_Sattelites,\
 SDEast_m,SDNorth_m,SDHeight_m,\
 VelEast,VelNorth,VelHeight,SDVelEast_m,SDVelNorth_m,SDVelHeight_m,\
 Heading_deg,Heading_Acc_deg,Accuracy\n");
+
 	int type = 0;
 	int wn = 0;
 
@@ -170,6 +196,61 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 				continue;
 			}
 			if (fpvt != NULL) fprintf(fpvt, "%s", buffer);
+
+			double ep[6] = { 0.0 };
+			char str[256] = "";
+			time2epoch(raw.time_pvt, ep);
+			sprintf_s(str, 255, "%04.0f-%02.0f-%02.0fT%02.0f:%02.0f:%06.3fZ",
+				ep[0], ep[1], ep[2], ep[3], ep[4], ep[5]);
+
+			if (fkml != NULL) {
+				fprintf(fkml, "<Placemark>\n");
+				fprintf(fkml, "<TimeStamp><when>%s</when></TimeStamp>\n", str);
+				fprintf(fkml, "<description><![CDATA[\n");
+				fprintf(fkml, "<TABLE border=\"1\" width=\"100%\" Align=\"center\">\n");
+				fprintf(fkml, "<TR ALIGN=RIGHT>\n");
+				fprintf(fkml, "<TR ALIGN = RIGHT><TD ALIGN = LEFT>Time:</TD><TD>");
+				fprintf(fkml, "%4d</TD><TD>", wn);
+				fprintf(fkml, "%11.4f</TD><TD>", raw.f9k_data[0]);
+				fprintf(fkml, "%02.0f:%02.0f:%06.3f</TD><TD>", ep[3], ep[4], ep[5]);
+				fprintf(fkml, "%2d/%2d/%3d</TD></TR>\n", (int)ep[0], (int)ep[1], (int)ep[2]);
+				fprintf(fkml, "<TR ALIGN=RIGHT><TD ALIGN=LEFT>Position:</TD><TD>");
+				fprintf(fkml, "%11.7f</TD><TD>", blh[0] * 180 / PI);
+				fprintf(fkml, "%11.7f</TD><TD>", blh[1] * 180 / PI);
+				fprintf(fkml, "%8.4f</TD>", blh[2]);
+				fprintf(fkml, "<TD>(DMS,m)</TD></TR>\n");
+				fprintf(fkml, "<TR ALIGN=RIGHT><TD ALIGN=LEFT>Vel(N,E,D):</TD><TD>");
+				fprintf(fkml, "%8.4f</TD><TD>", raw.f9k_data[9]);
+				fprintf(fkml, "%8.4f</TD><TD>", raw.f9k_data[10]);
+				fprintf(fkml, "%8.4f</TD>", raw.f9k_data[11]);
+				fprintf(fkml, "<TD>(m/s)</TD></TR>\n");
+				fprintf(fkml, "<TR ALIGN=RIGHT><TD ALIGN=LEFT>Att(r,p,y):</TD><TD>");
+				fprintf(fkml, "%8.4f</TD><TD>", 0.0);
+				fprintf(fkml, "%8.4f</TD><TD>", 0.0);
+				fprintf(fkml, "%8.4f</TD>", raw.f9k_data[6]);
+				fprintf(fkml, "<TD>(deg)</TD></TR>\n");
+				fprintf(fkml, "<TR ALIGN=RIGHT><TD ALIGN=LEFT>Misc Info:</TD><TD>");
+				fprintf(fkml, "%d</TD><TD>", raw.f9k_data[14]);
+				fprintf(fkml, "%d</TD><TD>", 0);
+				fprintf(fkml, "%d</TD>", 0);
+				fprintf(fkml, "<TD></TD></TR>\n");
+				fprintf(fkml, "</TABLE>\n");
+				fprintf(fkml, "]]></description>\n");
+
+				fprintf(fkml, "<styleUrl>#P%d</styleUrl>\n", 2);
+				fprintf(fkml, "<Style>\n");
+				fprintf(fkml, "<IconStyle>\n");
+				fprintf(fkml, "<heading>%f</heading>\n", raw.f9k_data[6]);
+				fprintf(fkml, "</IconStyle>\n");
+				fprintf(fkml, "</Style>\n");
+
+
+				fprintf(fkml, "<Point>\n");
+				fprintf(fkml, "<coordinates>%13.9f,%12.9f,%5.3f</coordinates>\n", blh[1] * R2D,
+					blh[0] * R2D, blh[2]);
+				fprintf(fkml, "</Point>\n");
+				fprintf(fkml, "</Placemark>\n");
+			}
 #if 1
 			if (fscv != NULL) fprintf(fscv, "%4d,%12.0f,%10.4f,%10.4f,%10.4f,%10.4f,%10.4f,%d,\
 %12.7f,%12.7f,%10.4f,%6.2f,%6.2f,\
@@ -240,6 +321,11 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 
 	if (fdat != NULL) fclose(fdat);
 	if (fimu != NULL) fclose(fimu);
+	if (fkml != NULL) {
+		fprintf(fkml, "</Document>\n");
+		fprintf(fkml, "</kml>\n");
+		fclose(fkml);
+	}
 
 	return;
 }
@@ -345,7 +431,7 @@ int main(int argc, char* argv[])
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010383_2019-12-04T19-30-46.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010384_2019-12-04T20-12-38.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010385_2019-12-04T20-55-55.ubx");
-		decode_ubx("C:\\Users\\yumingjin\\Desktop\\ymj\\5-ublox\\M8L\\11\\ubx_raw_log_010288_2019-11-26T19-14-37.ubx");
+		decode_ubx("E:\\data\\239\\COM124_200826_024331.ubx");
 	}
 	else
 	{
