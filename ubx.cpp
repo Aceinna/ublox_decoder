@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define HEADKML1 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 #define HEADKML2 "<kml xmlns=\"http://www.opengis.net/kml/2.2\">"
@@ -56,7 +57,7 @@ static int outnmea_gga1(unsigned char* buff, double time, int type, double* blh,
 }
 
 
-void decode_ubx(const char* fname)
+void decode_ubx(const char* fname, int odr)
 {
 	FILE* fdat = NULL;
 	FILE* fimu = NULL;
@@ -89,8 +90,8 @@ void decode_ubx(const char* fname)
 	sprintf(outfilename, "%s_navpvt.kml", fileName);
 	fkml = fopen(outfilename, "w"); if (fkml == NULL) return;
 
-	//B-G-R white green light-yellow  red yellow cyan
-	const char *color[] = {"ffffffff","ff008800","ff00aaff","ff0000ff","ff00ffff","ffff00ff"};  
+	//B-G-R white red purple  light-yellow green yellow
+	const char *color[] = {"ffffffff","ff0000ff","ffff00ff","50ff78f0","ff00ff00","ff00aaff"};  
 	fprintf(fkml, "%s\n%s\n", HEADKML1, HEADKML2);
 	fprintf(fkml, "<Document>\n");
 	for (int i = 0; i < 6; i++) {
@@ -204,7 +205,7 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 				ep[0], ep[1], ep[2], ep[3], ep[4], ep[5]);
 
 			double gps_tow = raw.f9k_data[0];
-			int output_kml_pnt = (gps_tow - floor(gps_tow)) < 0.05 ? 1 : 0;
+			int output_kml_pnt = fmod(gps_tow + 0.01, 1.0 / odr) < 0.05;
 
 			if (fkml != NULL && output_kml_pnt) {
 				fprintf(fkml, "<Placemark>\n");
@@ -233,14 +234,14 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 				fprintf(fkml, "%8.4f</TD>", raw.f9k_data[6]);
 				fprintf(fkml, "<TD>(deg)</TD></TR>\n");
 				fprintf(fkml, "<TR ALIGN=RIGHT><TD ALIGN=LEFT>Misc Info:</TD><TD>");
-				fprintf(fkml, "%d</TD><TD>", raw.f9k_data[14]);
+				fprintf(fkml, "%d</TD><TD>", (int)raw.f9k_data[14]);
 				fprintf(fkml, "%d</TD><TD>", 0);
 				fprintf(fkml, "%d</TD>", 0);
 				fprintf(fkml, "<TD></TD></TR>\n");
 				fprintf(fkml, "</TABLE>\n");
 				fprintf(fkml, "]]></description>\n");
 
-				fprintf(fkml, "<styleUrl>#P%d</styleUrl>\n", 2);
+				fprintf(fkml, "<styleUrl>#P%d</styleUrl>\n", (int)raw.f9k_data[14]);
 				fprintf(fkml, "<Style>\n");
 				fprintf(fkml, "<IconStyle>\n");
 				fprintf(fkml, "<heading>%f</heading>\n", raw.f9k_data[6]);
@@ -427,20 +428,26 @@ void decode_rtcm3(const char* fname, int year, int mon, int day)
 int main(int argc, char* argv[])
 {
 	//std::cout << "Hello World!\n";
-	printf("u-blox UBX file decoder, compiled on %d-%d-%d.\n", 2020, 8, 26);
-	if (argc < 2)
+	time_t t = time(NULL);
+	struct tm tm = *localtime(&t);
+	printf("u-blox UBX file decoder, compiled on %d-%d-%d.\n", tm.tm_year+1900, tm.tm_mon, tm.tm_mday);
+
+	
+	if (argc < 3)
 	{
+		int odr = 1;
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010381_2019-12-04T17-41-39.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010382_2019-12-04T18-44-04.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010383_2019-12-04T19-30-46.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010384_2019-12-04T20-12-38.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010385_2019-12-04T20-55-55.ubx");
-		decode_ubx("E:\\data\\240\\f9k\\COM126_200827_055204.ubx");
+		decode_ubx("E:\\data\\27\\am1\\F9P\\COM19_210127_031914.ubx", odr);
 	}
 	else
 	{
-		decode_ubx(argv[1]);
+		decode_ubx(argv[1], atoi(argv[2]));
 	}
+
 	return 1;
 }
 
