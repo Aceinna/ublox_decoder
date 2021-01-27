@@ -203,7 +203,10 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 			sprintf_s(str, 255, "%04.0f-%02.0f-%02.0fT%02.0f:%02.0f:%06.3fZ",
 				ep[0], ep[1], ep[2], ep[3], ep[4], ep[5]);
 
-			if (fkml != NULL) {
+			double gps_tow = raw.f9k_data[0];
+			int output_kml_pnt = (gps_tow - floor(gps_tow)) < 0.05 ? 1 : 0;
+
+			if (fkml != NULL && output_kml_pnt) {
 				fprintf(fkml, "<Placemark>\n");
 				fprintf(fkml, "<TimeStamp><when>%s</when></TimeStamp>\n", str);
 				fprintf(fkml, "<description><![CDATA[\n");
@@ -424,6 +427,7 @@ void decode_rtcm3(const char* fname, int year, int mon, int day)
 int main(int argc, char* argv[])
 {
 	//std::cout << "Hello World!\n";
+	printf("u-blox UBX file decoder, compiled on %d-%d-%d.\n", 2020, 8, 26);
 	if (argc < 2)
 	{
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010381_2019-12-04T17-41-39.ubx");
@@ -431,7 +435,7 @@ int main(int argc, char* argv[])
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010383_2019-12-04T19-30-46.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010384_2019-12-04T20-12-38.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010385_2019-12-04T20-55-55.ubx");
-		decode_ubx("E:\\data\\239\\COM124_200826_024331.ubx");
+		decode_ubx("E:\\data\\240\\f9k\\COM126_200827_055204.ubx");
 	}
 	else
 	{
