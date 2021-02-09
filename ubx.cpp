@@ -64,6 +64,7 @@ void decode_ubx(const char* fname, int odr)
 	FILE* fpvt = NULL; // u-blox own solution
 	FILE* fscv = NULL; // u-blox csv solution
 	FILE* fkml = NULL;
+	FILE* fgnssposvel = NULL;
 
 	raw_t raw;
 	if (!init_raw(&raw, STRFMT_UBX)) {
@@ -89,6 +90,10 @@ void decode_ubx(const char* fname, int odr)
 	memset(outfilename, 0, 255 * sizeof(char));
 	sprintf(outfilename, "%s_navpvt.kml", fileName);
 	fkml = fopen(outfilename, "w"); if (fkml == NULL) return;
+
+	memset(outfilename, 0, 255 * sizeof(char));
+	sprintf(outfilename, "%s_gnssposvel.txt", fileName);
+	fgnssposvel = fopen(outfilename, "w"); if (fgnssposvel == NULL) return;
 
 	//B-G-R white red purple  light-yellow green yellow
 	const char *color[] = {"ffffffff","ff0000ff","ffff00ff","50ff78f0","ff00ff00","ff00aaff"};  
@@ -268,6 +273,15 @@ Heading_deg,Heading_Acc_deg,Accuracy\n");
 				, 0.0, raw.f9k_data[7], raw.f9k_data[8]
 				, raw.f9k_data[10], raw.f9k_data[9], -raw.f9k_data[11], 0.0, 0.0, raw.f9k_data[12]
 			    , raw.f9k_data[5], raw.f9k_data[13], (int)raw.f9k_data[14]);
+
+			fprintf(fgnssposvel, "%4d,%11.4f,%14.9f,%14.9f,%10.4f,%10.4f,%10.4f,%10.4f,%3d,%10.4f,%10.4f,%10.4f,%10.4f\n"
+				, wn, round(raw.f9k_data[0]*1000)/1000
+				, raw.f9k_data[1], raw.f9k_data[2], raw.f9k_data[3]
+				, raw.f9k_data[7], raw.f9k_data[7], raw.f9k_data[8]
+				, (int)raw.f9k_data[14]
+				, raw.f9k_data[9], raw.f9k_data[10], -raw.f9k_data[11]
+				, atan2(raw.f9k_data[10], raw.f9k_data[9])* (57.295779513082320));
+
 #endif
 		}
 		else if (type == 16) //esfRaw
@@ -441,7 +455,7 @@ int main(int argc, char* argv[])
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010383_2019-12-04T19-30-46.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010384_2019-12-04T20-12-38.ubx");
 		//decode_ubx("E:\\test\\tesla\\12.04\\ubx_native\\ubx_raw_log_010385_2019-12-04T20-55-55.ubx");
-		decode_ubx("E:\\data\\27\\am1\\F9P\\COM19_210127_031914.ubx", odr);
+		decode_ubx("G:\\postprogress\\DPAN\\Process\\2021\\028\\WX01\\dev_f9p\\COM19_210128_022819.ubx", odr);
 	}
 	else
 	{

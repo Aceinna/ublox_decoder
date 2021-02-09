@@ -1525,7 +1525,7 @@ static int decode_esfmeas(raw_t* raw)
 			esfMeas_speed.direction = 0; // forward
 		}
 
-		esfMeas_speed.single_tick = temp & 0x7ff;
+		esfMeas_speed.single_tick = temp & 0x7fffff;
 
 		esfMeas_speed.calibTtag = U4(p + 12);
 
